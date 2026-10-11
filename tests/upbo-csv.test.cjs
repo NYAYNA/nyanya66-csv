@@ -1,0 +1,12 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const C=require('../js/upbo-csv.js');
+const source=require('./roulette-export-fixture.cjs');
+const row={user:'닉,네임 "하나"',id:'donor1',item:'A 단컷',count:4,dates:[{date:'2026-10-01',count:2},{date:'2026-10-02',count:2}]};
+test('imports actual upbo-note CSV including BOM, commas, escaped quotes and multiline dates',()=>{const out=C.parse(source.csv([row],{[source.keyOf(row)]:1}));assert.equal(out[0].quantity,3);assert.equal(out[0].user,row.user);assert.match(out[0].dates,/2026-10-02/);assert.match(out[0].dates,/\n/);});
+test('rejects missing headers, malformed CSV, duplicate donors/items and inconsistent counts',()=>{assert.throws(()=>C.parse('이름,항목\n가,나'));assert.throws(()=>C.parse('"a'));const good=source.csv([row]);assert.throws(()=>C.parse(good+'\r\n'+good.split('\r\n')[1]));assert.throws(()=>C.parse(good.replace('"4","0","4"','"4","1","4"')));});
+const members=[{id:1,user_id:'donor1'}],types=[{id:2,name:'A 단컷',is_active:true}];
+test('ID matching survives nickname changes and duplicate imports skip existing tasks',()=>{const rows=C.parse(source.csv([row]));const task={id:3,member_id:1,task_type_id:2,season_id:'s',quantity:2};const p=C.plan(rows,members,types,[task],'s');assert.equal(p[0].action,'skip');assert.equal(C.plan(rows,members,types,[task],'s',{},true)[0].action,'update');assert.equal(C.plan(rows,members,types,[task],'other')[0].action,'insert');});
+test('unmatched users and inactive types never register; zero remaining is excluded',()=>{const rows=C.parse(source.csv([row]));assert.equal(C.plan(rows,[],types,[],'s')[0].action,'skip');assert.equal(C.plan(rows,members,[{...types[0],is_active:false}],[],'s')[0].action,'skip');assert.equal(C.plan([{...rows[0],quantity:0}],members,types,[],'s')[0].action,'skip');});
+test('manual mapping collisions block every affected row',()=>{const rows=C.parse(source.csv([row,{...row,item:'B 단컷'}]));const p=C.plan(rows,members,types,[],'s',{'B 단컷':2});assert.ok(p.every(x=>x.action==='skip'));});
+test('spreadsheet formula escaping is decoded without evaluating content',()=>{const rows=C.parse(source.csv([{...row,user:'=SUM(1,2)',id:'@donor'}]));assert.equal(rows[0].user,'=SUM(1,2)');assert.equal(rows[0].id,'@donor');});

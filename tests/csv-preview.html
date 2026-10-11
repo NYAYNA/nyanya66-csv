@@ -1,0 +1,11 @@
+<!doctype html><meta charset="utf-8"><title>CSV 숙제 등록 · 로컬 테스트</title>
+<style>body{font:15px sans-serif;background:#f4f2fb;color:#302b40;padding:35px}main{max-width:1150px;margin:auto}section{background:white;padding:24px;border-radius:18px;margin-top:20px}button,select,input{font:inherit;padding:8px}button{background:#8263d3;color:white;border:0;border-radius:8px}button:disabled{opacity:.4}p{line-height:1.7}label{display:block;margin:12px 0}th{text-align:left;padding:10px}pre{background:#fff;padding:20px;white-space:pre-wrap}</style>
+<main><h1>숙제 CSV 등록 테스트</h1><p>가상 데이터만 사용합니다. 실제 사이트나 데이터베이스에 연결하지 않습니다.</p><label>시즌 <select id="seasonSelect"><option value="demo">테스트 시즌</option></select></label><div id="tab-assign"></div><pre id="result">등록 전</pre></main>
+<script>
+let allMembers=[{id:1,user_id:'donor1',nickname:'테스트후원자'}];
+let allTaskTypes=[{id:2,name:'A 단컷',is_active:true}],allTasks=[];
+function initSupabase(){return {from(){let op='',data,filters=[];const api={select(){if(!op)op='select';return api},eq(k,v){filters.push([k,v]);return api},update(v){op='update';data=v;return api},insert(v){op='insert';data=v;return api},then(resolve){let found=allTasks.filter(t=>filters.every(([k,v])=>t[k]===v));if(op==='insert'){allTasks.push({...data,id:allTasks.length+1});found=[]}if(op==='update')found.forEach(t=>Object.assign(t,data));return Promise.resolve({data:found.map(t=>({...t})),error:null}).then(resolve)}};return api}}}
+async function loadAdminData(){document.getElementById('result').textContent=JSON.stringify(allTasks,null,2)}
+function handleMemberSelect(){}
+</script>
+<script src="../js/upbo-csv.js"></script><script src="../js/upbo-csv-admin.js"></script>
